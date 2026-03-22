@@ -11,7 +11,7 @@ Add to your MCP client configuration:
   "mcpServers": {
     "gmail": {
       "command": "npx",
-      "args": ["-y", "gmail-mcp"]
+      "args": ["-y", "@d-mato/gmail-mcp"]
     }
   }
 }
