@@ -13,6 +13,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --write ."
   },
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",
     "@types/node": "^25.5.0",
-    "typescript": "6.0.0-beta"
+    "typescript": "6.0.0-beta",
+    "vitest": "^4.1.0"
   }
 }

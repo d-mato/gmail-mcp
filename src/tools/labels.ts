@@ -1,25 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { GmailClient } from "../gmail-client.js";
-
-function errorResponse(message: string) {
-  return {
-    content: [{ type: "text" as const, text: `Error: ${message}` }],
-    isError: true as const,
-  };
-}
-
-function wrapGmailError(err: unknown) {
-  const error = err as { code?: number; message?: string };
-  const code = error.code;
-  const msg = error.message ?? String(err);
-
-  if (code === 404) return errorResponse("Label not found");
-  if (code === 400) return errorResponse(`Invalid request: ${msg}`);
-  if (code === 403) return errorResponse("Insufficient permissions");
-  if (code === 429) return errorResponse("Rate limited — try again later");
-  return errorResponse(msg);
-}
+import { wrapGmailError } from "./error-handler.js";
 
 export function registerLabelTools(
   server: McpServer,
@@ -33,7 +15,7 @@ export function registerLabelTools(
         .join("\n");
       return { content: [{ type: "text", text: text || "No labels found." }] };
     } catch (err) {
-      return wrapGmailError(err);
+      return wrapGmailError(err, "Label");
     }
   });
 
