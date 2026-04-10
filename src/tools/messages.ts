@@ -4,6 +4,7 @@ import type {
   GmailClient,
   MessageDetail,
   MessageSummary,
+  ThreadDetail,
 } from "../gmail-client.js";
 import { wrapGmailError } from "./error-handler.js";
 
@@ -32,6 +33,13 @@ function formatMessageDetail(msg: MessageDetail): string {
     "",
     msg.body,
   ].join("\n");
+}
+
+function formatThreadDetail(thread: ThreadDetail): string {
+  const count = thread.messages.length;
+  const header = `Thread: ${thread.id} (${count} ${count === 1 ? "message" : "messages"})`;
+  const body = thread.messages.map(formatMessageDetail).join("\n\n---\n\n");
+  return `${header}\n\n${body}`;
 }
 
 export function registerMessageTools(
@@ -76,6 +84,24 @@ export function registerMessageTools(
         return { content: [{ type: "text", text: formatMessageDetail(msg) }] };
       } catch (err) {
         return wrapGmailError(err, "Message");
+      }
+    },
+  );
+
+  server.tool(
+    "gmail_get_thread",
+    "Get all messages in a Gmail thread by thread ID",
+    {
+      threadId: z.string().describe("Gmail thread ID"),
+    },
+    async ({ threadId }) => {
+      try {
+        const thread = await gmail.getThread(threadId);
+        return {
+          content: [{ type: "text", text: formatThreadDetail(thread) }],
+        };
+      } catch (err) {
+        return wrapGmailError(err, "Thread");
       }
     },
   );
