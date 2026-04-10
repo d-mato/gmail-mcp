@@ -1,5 +1,7 @@
 # gmail-mcp
 
+[![npm version](https://img.shields.io/npm/v/@d-mato/gmail-mcp.svg)](https://www.npmjs.com/package/@d-mato/gmail-mcp)
+
 MCP server for Gmail — search, read, archive, and manage your email from any MCP client.
 
 ## Setup
