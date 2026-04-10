@@ -19,6 +19,11 @@ export interface MessageDetail extends MessageSummary {
   body: string;
 }
 
+export interface ThreadDetail {
+  id: string;
+  messages: MessageDetail[];
+}
+
 export class GmailClient {
   private gmail: gmail_v1.Gmail;
 
@@ -93,6 +98,36 @@ export class GmailClient {
       labelIds: data.labelIds ?? [],
       body,
     };
+  }
+
+  async getThread(threadId: string): Promise<ThreadDetail> {
+    const res = await this.gmail.users.threads.get({
+      userId: "me",
+      id: threadId,
+      format: "full",
+    });
+
+    const data = res.data;
+    if (!data.id) {
+      throw new Error(`Invalid thread data for id: ${threadId}`);
+    }
+
+    const messages: MessageDetail[] = (data.messages ?? []).map((msg) => {
+      if (!msg.id || !msg.threadId) {
+        throw new Error(`Invalid message data in thread: ${threadId}`);
+      }
+      const body = msg.payload ? extractTextBody(msg.payload) : "";
+      return {
+        id: msg.id,
+        threadId: msg.threadId,
+        snippet: msg.snippet ?? "",
+        headers: extractHeaders(msg.payload?.headers),
+        labelIds: msg.labelIds ?? [],
+        body,
+      };
+    });
+
+    return { id: data.id, messages };
   }
 
   async modifyMessage(

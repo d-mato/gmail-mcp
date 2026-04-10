@@ -29,6 +29,7 @@ On first launch, a browser window will open for Google account authorization. Af
 |------|-------------|
 | `gmail_search` | Search messages using Gmail query syntax (e.g. `from:user@example.com`, `is:unread`) |
 | `gmail_get_message` | Get the full content of a message by ID |
+| `gmail_get_thread` | Get all messages in a thread by thread ID |
 | `gmail_archive` | Archive a message (remove from inbox) |
 | `gmail_batch_archive` | Archive multiple messages |
 | `gmail_trash` | Move a message to trash |
