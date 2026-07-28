@@ -4,7 +4,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { authenticate } from "./auth.js";
 import { GmailClient } from "./gmail-client.js";
-import { registerLabelTools, registerMessageTools } from "./tools/index.js";
+import {
+  registerLabelTools,
+  registerMessageTools,
+  registerThreadTools,
+} from "./tools/index.js";
 
 async function main() {
   const auth = await authenticate();
@@ -16,6 +20,7 @@ async function main() {
   });
 
   registerMessageTools(server, gmailClient);
+  registerThreadTools(server, gmailClient);
   registerLabelTools(server, gmailClient);
 
   const transport = new StdioServerTransport();

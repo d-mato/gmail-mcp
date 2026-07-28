@@ -38,6 +38,16 @@ On first launch, a browser window will open for Google account authorization. Af
 | `gmail_mark_read` | Mark a message as read |
 | `gmail_mark_unread` | Mark a message as unread |
 
+### Threads
+
+| Tool | Description |
+|------|-------------|
+| `gmail_archive_thread` | Archive all messages in a thread (remove from inbox) |
+| `gmail_trash_thread` | Move all messages in a thread to trash |
+| `gmail_untrash_thread` | Remove a thread from trash |
+| `gmail_mark_thread_read` | Mark all messages in a thread as read |
+| `gmail_mark_thread_unread` | Mark all messages in a thread as unread |
+
 ### Labels
 
 | Tool | Description |
