@@ -24,6 +24,11 @@ export interface ThreadDetail {
   messages: MessageDetail[];
 }
 
+export interface SearchResult {
+  messages: MessageSummary[];
+  nextPageToken?: string;
+}
+
 export class GmailClient {
   private gmail: gmail_v1.Gmail;
 
@@ -34,15 +39,18 @@ export class GmailClient {
   async searchMessages(
     query: string,
     maxResults: number = 10,
-  ): Promise<MessageSummary[]> {
+    pageToken?: string,
+  ): Promise<SearchResult> {
     const res = await this.gmail.users.messages.list({
       userId: "me",
       q: query,
       maxResults: Math.min(maxResults, 50),
+      pageToken,
     });
 
+    const nextPageToken = res.data.nextPageToken ?? undefined;
     const messageIds = res.data.messages ?? [];
-    if (messageIds.length === 0) return [];
+    if (messageIds.length === 0) return { messages: [], nextPageToken };
 
     const messages = await Promise.all(
       messageIds
@@ -68,7 +76,7 @@ export class GmailClient {
         }),
     );
 
-    return messages;
+    return { messages, nextPageToken };
   }
 
   async getMessage(

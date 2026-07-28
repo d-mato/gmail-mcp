@@ -57,14 +57,25 @@ export function registerMessageTools(
         .max(50)
         .default(10)
         .describe("Max results (1-50)"),
+      pageToken: z
+        .string()
+        .optional()
+        .describe("Page token from a previous search to fetch the next page"),
     },
-    async ({ query, maxResults }) => {
+    async ({ query, maxResults, pageToken }) => {
       try {
-        const messages = await gmail.searchMessages(query, maxResults);
+        const { messages, nextPageToken } = await gmail.searchMessages(
+          query,
+          maxResults,
+          pageToken,
+        );
         if (messages.length === 0) {
           return { content: [{ type: "text", text: "No messages found." }] };
         }
-        const text = messages.map(formatMessageSummary).join("\n\n---\n\n");
+        let text = messages.map(formatMessageSummary).join("\n\n---\n\n");
+        if (nextPageToken) {
+          text += `\n\nMore results available. Pass pageToken "${nextPageToken}" to fetch the next page.`;
+        }
         return { content: [{ type: "text", text }] };
       } catch (err) {
         return wrapGmailError(err, "Message");
