@@ -1,10 +1,62 @@
 import { describe, expect, test } from "vitest";
 import {
+  chunk,
   decodeBase64Url,
   extractHeaders,
   extractTextBody,
+  mapWithConcurrency,
   stripHtml,
 } from "./utils.js";
+
+describe("chunk", () => {
+  test("splits into chunks of the given size", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+  });
+
+  test("returns a single chunk when smaller than the size", () => {
+    expect(chunk([1, 2], 10)).toEqual([[1, 2]]);
+  });
+
+  test("returns no chunks for an empty list", () => {
+    expect(chunk([], 10)).toEqual([]);
+  });
+});
+
+describe("mapWithConcurrency", () => {
+  test("keeps results in input order", async () => {
+    const delays = [30, 0, 10];
+    const results = await mapWithConcurrency(delays, 3, async (ms) => {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      return ms;
+    });
+    expect(results).toEqual(delays);
+  });
+
+  test("never exceeds the concurrency limit", async () => {
+    let running = 0;
+    let peak = 0;
+    await mapWithConcurrency([1, 2, 3, 4, 5, 6, 7], 3, async () => {
+      running++;
+      peak = Math.max(peak, running);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      running--;
+    });
+    expect(peak).toBe(3);
+  });
+
+  test("handles an empty list", async () => {
+    expect(await mapWithConcurrency([], 3, async (x) => x)).toEqual([]);
+  });
+
+  test("rejects when a task rejects", async () => {
+    await expect(
+      mapWithConcurrency([1, 2, 3], 2, async (n) => {
+        if (n === 2) throw new Error("boom");
+        return n;
+      }),
+    ).rejects.toThrow("boom");
+  });
+});
 
 describe("extractHeaders", () => {
   test("extracts all headers", () => {

@@ -128,13 +128,14 @@ export function registerMessageTools(
     "gmail_batch_archive",
     "Archive multiple messages",
     {
-      messageIds: z.array(z.string()).describe("List of Gmail message IDs"),
+      messageIds: z
+        .array(z.string())
+        .min(1)
+        .describe("List of Gmail message IDs"),
     },
     async ({ messageIds }) => {
       try {
-        await Promise.all(
-          messageIds.map((id) => gmail.modifyMessage(id, [], ["INBOX"])),
-        );
+        await gmail.batchModifyMessages(messageIds, [], ["INBOX"]);
         return {
           content: [
             { type: "text", text: `${messageIds.length} messages archived.` },
@@ -168,11 +169,16 @@ export function registerMessageTools(
     "gmail_batch_trash",
     "Move multiple messages to trash",
     {
-      messageIds: z.array(z.string()).describe("List of Gmail message IDs"),
+      messageIds: z
+        .array(z.string())
+        .min(1)
+        .describe("List of Gmail message IDs"),
     },
     async ({ messageIds }) => {
       try {
-        await Promise.all(messageIds.map((id) => gmail.trashMessage(id)));
+        // Gmail has no batch equivalent of messages.trash, but TRASH is an
+        // ordinary system label that batchModify can apply.
+        await gmail.batchModifyMessages(messageIds, ["TRASH"], []);
         return {
           content: [
             { type: "text", text: `${messageIds.length} messages trashed.` },

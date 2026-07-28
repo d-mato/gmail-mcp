@@ -1,3 +1,37 @@
+export function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/**
+ * Like `Promise.all(items.map(fn))`, but with at most `limit` calls in flight.
+ * Gmail rejects bursts of parallel requests for a single user, so read paths
+ * that fan out over message IDs have to keep their concurrency bounded.
+ */
+export async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+
+  return results;
+}
+
 export interface MessageHeader {
   from: string;
   to: string;
