@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type {
@@ -6,7 +8,17 @@ import type {
   MessageSummary,
   ThreadDetail,
 } from "../gmail-client.js";
-import { wrapGmailError } from "./error-handler.js";
+import { formatByteSize } from "../utils.js";
+import { errorResponse, wrapGmailError } from "./error-handler.js";
+
+const INLINE_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
+const MAX_INLINE_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_INLINE_TEXT_CHARS = 50_000;
 
 function formatMessageSummary(msg: MessageSummary): string {
   return [
@@ -22,7 +34,7 @@ function formatMessageSummary(msg: MessageSummary): string {
 }
 
 function formatMessageDetail(msg: MessageDetail): string {
-  return [
+  const lines = [
     `ID: ${msg.id}`,
     `Thread: ${msg.threadId}`,
     `From: ${msg.headers.from}`,
@@ -30,9 +42,14 @@ function formatMessageDetail(msg: MessageDetail): string {
     `Subject: ${msg.headers.subject}`,
     `Date: ${msg.headers.date}`,
     `Labels: ${msg.labelIds.join(", ")}`,
-    "",
-    msg.body,
-  ].join("\n");
+  ];
+  for (const att of msg.attachments) {
+    lines.push(
+      `Attachment: ${att.filename} (${att.mimeType}, ${formatByteSize(att.size)}, ID: ${att.attachmentId})`,
+    );
+  }
+  lines.push("", msg.body);
+  return lines.join("\n");
 }
 
 function formatThreadDetail(thread: ThreadDetail): string {
@@ -113,6 +130,85 @@ export function registerMessageTools(
         };
       } catch (err) {
         return wrapGmailError(err, "Thread");
+      }
+    },
+  );
+
+  server.tool(
+    "gmail_get_attachment",
+    "Download an attachment from a message. Images and text are returned inline; pass savePath to save any attachment to disk.",
+    {
+      messageId: z.string().describe("Gmail message ID"),
+      attachmentId: z
+        .string()
+        .describe("Attachment ID shown by gmail_get_message"),
+      mimeType: z
+        .string()
+        .optional()
+        .describe(
+          "Attachment MIME type shown by gmail_get_message; determines how the content is returned",
+        ),
+      savePath: z
+        .string()
+        .optional()
+        .describe(
+          "Absolute file path to save the attachment to instead of returning it inline",
+        ),
+    },
+    async ({ messageId, attachmentId, mimeType, savePath }) => {
+      try {
+        const data = await gmail.getAttachment(messageId, attachmentId);
+
+        if (savePath) {
+          await mkdir(dirname(savePath), { recursive: true });
+          await writeFile(savePath, data);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Attachment saved to ${savePath} (${formatByteSize(data.length)}).`,
+              },
+            ],
+          };
+        }
+
+        const type = mimeType ?? "application/octet-stream";
+
+        if (INLINE_IMAGE_TYPES.has(type)) {
+          if (data.length > MAX_INLINE_IMAGE_BYTES) {
+            return errorResponse(
+              `Image is too large to return inline (${formatByteSize(data.length)}). Pass savePath to save it to disk.`,
+            );
+          }
+          return {
+            content: [
+              { type: "image", data: data.toString("base64"), mimeType: type },
+            ],
+          };
+        }
+
+        if (
+          type.startsWith("text/") ||
+          type === "application/json" ||
+          type === "application/xml"
+        ) {
+          let text = data.toString("utf-8");
+          if (text.length > MAX_INLINE_TEXT_CHARS) {
+            text = `${text.slice(0, MAX_INLINE_TEXT_CHARS)}\n\n[Truncated at ${MAX_INLINE_TEXT_CHARS} characters — pass savePath to get the full file]`;
+          }
+          return { content: [{ type: "text", text }] };
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Binary attachment (${type}, ${formatByteSize(data.length)}). Pass savePath to save it to disk.`,
+            },
+          ],
+        };
+      } catch (err) {
+        return wrapGmailError(err, "Attachment");
       }
     },
   );

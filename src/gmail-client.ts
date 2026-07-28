@@ -1,6 +1,8 @@
 import { type gmail_v1, google } from "googleapis";
 import {
+  type AttachmentInfo,
   chunk,
+  extractAttachments,
   extractHeaders,
   extractTextBody,
   type MessageHeader,
@@ -52,6 +54,7 @@ export interface MessageSummary {
 
 export interface MessageDetail extends MessageSummary {
   body: string;
+  attachments: AttachmentInfo[];
 }
 
 export interface ThreadDetail {
@@ -144,6 +147,10 @@ export class GmailClient {
       headers: extractHeaders(data.payload?.headers),
       labelIds: data.labelIds ?? [],
       body,
+      attachments:
+        format === "full" && data.payload
+          ? extractAttachments(data.payload)
+          : [],
     };
   }
 
@@ -171,6 +178,7 @@ export class GmailClient {
         headers: extractHeaders(msg.payload?.headers),
         labelIds: msg.labelIds ?? [],
         body,
+        attachments: msg.payload ? extractAttachments(msg.payload) : [],
       };
     });
 
@@ -260,6 +268,23 @@ export class GmailClient {
       userId: "me",
       id: threadId,
     });
+  }
+
+  async getAttachment(
+    messageId: string,
+    attachmentId: string,
+  ): Promise<Buffer> {
+    const res = await this.gmail.users.messages.attachments.get({
+      userId: "me",
+      messageId,
+      id: attachmentId,
+    });
+
+    const data = res.data.data;
+    if (!data) {
+      throw new Error(`No data for attachment ${attachmentId}`);
+    }
+    return Buffer.from(data, "base64url");
   }
 
   async listLabels(): Promise<gmail_v1.Schema$Label[]> {
