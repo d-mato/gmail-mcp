@@ -164,6 +164,32 @@ export class GmailClient {
     });
   }
 
+  async modifyThread(
+    threadId: string,
+    addLabelIds: string[] = [],
+    removeLabelIds: string[] = [],
+  ): Promise<void> {
+    await this.gmail.users.threads.modify({
+      userId: "me",
+      id: threadId,
+      requestBody: { addLabelIds, removeLabelIds },
+    });
+  }
+
+  async trashThread(threadId: string): Promise<void> {
+    await this.gmail.users.threads.trash({
+      userId: "me",
+      id: threadId,
+    });
+  }
+
+  async untrashThread(threadId: string): Promise<void> {
+    await this.gmail.users.threads.untrash({
+      userId: "me",
+      id: threadId,
+    });
+  }
+
   async listLabels(): Promise<gmail_v1.Schema$Label[]> {
     const res = await this.gmail.users.labels.list({ userId: "me" });
     return res.data.labels ?? [];
