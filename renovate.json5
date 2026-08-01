@@ -1,0 +1,11 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+
+  // Same as the cooldown Dependabot used: wait until a release is 7 days old.
+  minimumReleaseAge: "7 days",
+
+  // Run `pnpm dedupe` after every update. This is the reason for the move
+  // away from Dependabot, which has no equivalent.
+  postUpdateOptions: ["pnpmDedupe"],
+}
