@@ -31,9 +31,9 @@ On first launch, a browser window will open for Google account authorization. Af
 | `gmail_get_message` | Get the full content of a message by ID |
 | `gmail_get_thread` | Get all messages in a thread by thread ID |
 | `gmail_archive` | Archive a message (remove from inbox) |
-| `gmail_batch_archive` | Archive multiple messages |
+| `gmail_batch_archive` | Archive multiple messages in a single API call |
 | `gmail_trash` | Move a message to trash |
-| `gmail_batch_trash` | Move multiple messages to trash |
+| `gmail_batch_trash` | Move multiple messages to trash in a single API call |
 | `gmail_untrash` | Remove a message from trash |
 | `gmail_mark_read` | Mark a message as read |
 | `gmail_mark_unread` | Mark a message as unread |
