@@ -94,7 +94,7 @@ describe("searchMessages", () => {
       return messageResponse(id);
     });
 
-    const messages = await new GmailClient(auth).searchMessages(
+    const { messages } = await new GmailClient(auth).searchMessages(
       "is:unread",
       20,
     );
