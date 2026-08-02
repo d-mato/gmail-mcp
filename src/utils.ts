@@ -64,8 +64,45 @@ export function decodeBase64Url(data: string): string {
 
 interface MimePart {
   mimeType?: string | null;
-  body?: { data?: string | null } | null;
+  filename?: string | null;
+  body?: {
+    data?: string | null;
+    attachmentId?: string | null;
+    size?: number | null;
+  } | null;
   parts?: MimePart[] | null;
+}
+
+export interface AttachmentInfo {
+  filename: string;
+  mimeType: string;
+  attachmentId: string;
+  size: number;
+}
+
+export function extractAttachments(payload: MimePart): AttachmentInfo[] {
+  const attachments: AttachmentInfo[] = [];
+  const walk = (part: MimePart): void => {
+    if (part.filename && part.body?.attachmentId) {
+      attachments.push({
+        filename: part.filename,
+        mimeType: part.mimeType ?? "application/octet-stream",
+        attachmentId: part.body.attachmentId,
+        size: part.body.size ?? 0,
+      });
+    }
+    for (const child of part.parts ?? []) {
+      walk(child);
+    }
+  };
+  walk(payload);
+  return attachments;
+}
+
+export function formatByteSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function extractTextBody(payload: MimePart): string {

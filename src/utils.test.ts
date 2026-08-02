@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 import {
   chunk,
   decodeBase64Url,
+  extractAttachments,
   extractHeaders,
   extractTextBody,
+  formatByteSize,
   mapWithConcurrency,
   stripHtml,
 } from "./utils.js";
@@ -208,6 +210,117 @@ describe("extractTextBody", () => {
       body: { data: null },
     };
     expect(extractTextBody(payload)).toBe("");
+  });
+});
+
+describe("extractAttachments", () => {
+  test("finds attachments in a multipart message", () => {
+    const payload = {
+      mimeType: "multipart/mixed",
+      parts: [
+        {
+          mimeType: "text/plain",
+          body: { data: "aGVsbG8" },
+        },
+        {
+          mimeType: "application/pdf",
+          filename: "report.pdf",
+          body: { attachmentId: "att-1", size: 12345 },
+        },
+      ],
+    };
+    expect(extractAttachments(payload)).toEqual([
+      {
+        filename: "report.pdf",
+        mimeType: "application/pdf",
+        attachmentId: "att-1",
+        size: 12345,
+      },
+    ]);
+  });
+
+  test("finds attachments in nested multipart", () => {
+    const payload = {
+      mimeType: "multipart/mixed",
+      parts: [
+        {
+          mimeType: "multipart/related",
+          parts: [
+            {
+              mimeType: "image/png",
+              filename: "logo.png",
+              body: { attachmentId: "att-2", size: 100 },
+            },
+          ],
+        },
+      ],
+    };
+    expect(extractAttachments(payload)).toEqual([
+      {
+        filename: "logo.png",
+        mimeType: "image/png",
+        attachmentId: "att-2",
+        size: 100,
+      },
+    ]);
+  });
+
+  test("returns empty array when no attachments", () => {
+    const payload = {
+      mimeType: "text/plain",
+      body: { data: "aGVsbG8" },
+    };
+    expect(extractAttachments(payload)).toEqual([]);
+  });
+
+  test("skips parts with a filename but no attachmentId", () => {
+    const payload = {
+      mimeType: "multipart/mixed",
+      parts: [
+        {
+          mimeType: "text/calendar",
+          filename: "invite.ics",
+          body: { data: "aW52aXRl" },
+        },
+      ],
+    };
+    expect(extractAttachments(payload)).toEqual([]);
+  });
+
+  test("defaults missing mimeType and size", () => {
+    const payload = {
+      mimeType: "multipart/mixed",
+      parts: [
+        {
+          filename: "unknown.bin",
+          body: { attachmentId: "att-3" },
+        },
+      ],
+    };
+    expect(extractAttachments(payload)).toEqual([
+      {
+        filename: "unknown.bin",
+        mimeType: "application/octet-stream",
+        attachmentId: "att-3",
+        size: 0,
+      },
+    ]);
+  });
+});
+
+describe("formatByteSize", () => {
+  test("formats bytes", () => {
+    expect(formatByteSize(0)).toBe("0 B");
+    expect(formatByteSize(512)).toBe("512 B");
+  });
+
+  test("formats kilobytes", () => {
+    expect(formatByteSize(1024)).toBe("1.0 KB");
+    expect(formatByteSize(1536)).toBe("1.5 KB");
+  });
+
+  test("formats megabytes", () => {
+    expect(formatByteSize(5 * 1024 * 1024)).toBe("5.0 MB");
   });
 });
 
